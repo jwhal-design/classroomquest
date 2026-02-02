@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CLASSROOM QUEST: The Integration Survival Guide</title>
+  <link href="https://fonts.googleapis.com/css2?family=VT323&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --terminal-green: #33ff33;
+      --terminal-amber: #ffb000;
+      --terminal-cyan: #00ffff;
+      --terminal-magenta: #ff00ff;
+      --terminal-red: #ff3333;
+      --terminal-dim: #006600;
+      --bg-dark: #0a0a0a;
+      --bg-screen: #0d1a0d;
+      --scanline-opacity: 0.03;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--bg-dark);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      font-family: 'VT323', monospace;
+    }
+
+    .crt-container {
+      width: 100%;
+      max-width: 800px;
+      background: #1a1a1a;
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 
+        0 0 0 4px #333,
+        0 0 0 8px #222,
+        0 0 40px rgba(51, 255, 51, 0.2),
+        inset 0 0 100px rgba(0, 0, 0, 0.5);
+    }
+
+    .screen {
+      background: var(--bg-screen);
+      border-radius: 10px;
+      padding: 30px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.5);
+    }
+
+    .screen::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, var(--scanline-opacity)),
+        rgba(0, 0, 0, var(--scanline-opacity)) 1px,
+        transparent 1px,
+        transparent 2px
+      );
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .screen::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(ellipse at center, transparent 0%, rgba(0, 0, 0, 0.3) 100%);
+      pointer-events: none;
+      z-index: 11;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px dashed var(--terminal-dim);
+    }
+
+    .title {
+      font-size: 2.2rem;
+      color: var(--terminal-green);
+      text-shadow: 0 0 10px var(--terminal-green);
+      letter-spacing: 4px;
+      animation: flicker 4s infinite;
+    }
+
+    .subtitle {
+      font-size: 1.1rem;
+      color: var(--terminal-amber);
+      margin-top: 5px;
+      letter-spacing: 2px;
+    }
+
+    @keyframes flicker {
+      0%, 97%, 100% { opacity: 1; }
+      98% { opacity: 0.8; }
+      99% { opacity: 0.9; }
+    }
+
+    .stats-bar {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--terminal-dim);
+      font-size: 1rem;
+      color: var(--terminal-cyan);
+    }
+
+    .stat {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .stat-label {
+      color: var(--terminal-dim);
+    }
+
+    .stat-value {
+      color: var(--terminal-amber);
+    }
+
+    .game-content {
+      position: relative;
+      z-index: 5;
+    }
+
+    .scene-text {
+      font-size: 1.4rem;
+      line-height: 1.8;
+      color: var(--terminal-green);
+      margin-bottom: 25px;
+      min-height: 150px;
+    }
+
+    .scene-text p {
+      margin-bottom: 15px;
+    }
+
+    .highlight {
+      color: var(--terminal-amber);
+      text-shadow: 0 0 5px var(--terminal-amber);
+    }
+
+    .danger {
+      color: var(--terminal-red);
+      text-shadow: 0 0 5px var(--terminal-red);
+    }
+
+    .success {
+      color: var(--terminal-cyan);
+      text-shadow: 0 0 5px var(--terminal-cyan);
+    }
+
+    .choices {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .choice-btn {
+      background: transparent;
+      border: 1px solid var(--terminal-green);
+      color: var(--terminal-green);
+      font-family: 'VT323', monospace;
+      font-size: 1.2rem;
+      padding: 12px 20px;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .choice-btn::before {
+      content: "> ";
+      color: var(--terminal-amber);
+    }
+
+    .choice-btn:hover {
+      background: rgba(51, 255, 51, 0.1);
+      border-color: var(--terminal-amber);
+      color: var(--terminal-amber);
+      padding-left: 30px;
+    }
+
+    .choice-btn:active {
+      background: rgba(51, 255, 51, 0.2);
+    }
+
+    .outcome-box {
+      background: rgba(0, 0, 0, 0.3);
+      border-left: 3px solid var(--terminal-cyan);
+      padding: 15px;
+      margin: 20px 0;
+      font-size: 1.2rem;
+    }
+
+    .outcome-box.bad {
+      border-color: var(--terminal-red);
+    }
+
+    .outcome-box.good {
+      border-color: var(--terminal-cyan);
+    }
+
+    .tip-box {
+      background: rgba(255, 176, 0, 0.1);
+      border: 1px dashed var(--terminal-amber);
+      padding: 15px;
+      margin: 20px 0;
+      font-size: 1.1rem;
+      color: var(--terminal-amber);
+    }
+
+    .tip-box::before {
+      content: "★ PRO TIP: ";
+      font-weight: bold;
+    }
+
+    .inventory {
+      margin-top: 20px;
+      padding-top: 15px;
+      border-top: 1px solid var(--terminal-dim);
+      font-size: 1rem;
+      color: var(--terminal-dim);
+    }
+
+    .inventory-title {
+      color: var(--terminal-magenta);
+      margin-bottom: 10px;
+    }
+
+    .inventory-item {
+      display: inline-block;
+      background: rgba(255, 0, 255, 0.1);
+      border: 1px solid var(--terminal-magenta);
+      padding: 3px 10px;
+      margin: 3px;
+      font-size: 0.9rem;
+      color: var(--terminal-magenta);
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: var(--terminal-dim);
+      margin: 10px 0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--terminal-green);
+      transition: width 0.5s ease;
+      box-shadow: 0 0 10px var(--terminal-green);
+    }
+
+    .restart-btn {
+      background: var(--terminal-red);
+      border: none;
+      color: #000;
+      font-family: 'VT323', monospace;
+      font-size: 1.2rem;
+      padding: 10px 25px;
+      cursor: pointer;
+      margin-top: 15px;
+    }
+
+    .restart-btn:hover {
+      background: #ff6666;
+    }
+
+    .blink {
+      animation: blink 1s infinite;
+    }
+
+    @keyframes blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
+
+    .typing {
+      overflow: hidden;
+      white-space: nowrap;
+      animation: typing 2s steps(40, end);
+    }
+
+    @keyframes typing {
+      from { width: 0; }
+      to { width: 100%; }
+    }
+
+    @media (max-width: 600px) {
+      .crt-container {
+        padding: 15px;
+      }
+      .screen {
+        padding: 20px;
+      }
+      .title {
+        font-size: 1.6rem;
+      }
+      .scene-text {
+        font-size: 1.2rem;
+      }
+      .stats-bar {
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="crt-container">
+    <div class="screen">
+      <div class="header">
+        <div class="title">CLASSROOM QUEST</div>
+        <div class="subtitle">The Integration Survival Guide</div>
+      </div>
+
+      <div class="stats-bar">
+        <div class="stat">
+          <span class="stat-label">SANITY:</span>
+          <span class="stat-value" id="sanity">100</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">TIME LEFT:</span>
+          <span class="stat-value" id="time">50</span><span class="stat-label"> min</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">SCENE:</span>
+          <span class="stat-value" id="scene-num">1</span><span class="stat-label">/8</span>
+        </div>
+      </div>
+
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress" style="width: 12.5%"></div>
+      </div>
+
+      <div class="game-content" id="game-content">
+        <!-- Content loaded dynamically -->
+      </div>
+
+      <div class="inventory" id="inventory">
+        <div class="inventory-title">STRATEGIES ACQUIRED:</div>
+        <div id="inventory-items">None yet...</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Game State
+    let gameState = {
+      sanity: 100,
+      time: 50,
+      scene: 1,
+      inventory: [],
+      flags: {}
+    };
+
+    // Scenes Data
+    const scenes = {
+      1: {
+        text: `<p>The bell rings. <span class="highlight">30 seventh graders</span> flood into your classroom.</p>
+               <p>Today's lesson: A collaborative research project using Chromebooks.</p>
+               <p>Within 90 seconds, three hands shoot up. You hear the dreaded phrase:</p>
+               <p class="danger">"IT'S NOT WORKING."</p>
+               <p>What do you do?</p>`,
+        choices: [
+          { text: "Rush over to troubleshoot immediately", next: 2, sanity: -15, time: -8 },
+          { text: "Ask: 'What have you tried so far?'", next: 3, sanity: 0, time: -2, item: "3-Before-Me Protocol" },
+          { text: "Direct them to the peer tech helper", next: 4, sanity: 5, time: 0, item: "Peer Tech Helpers" }
+        ]
+      },
+      2: {
+        text: `<p>You sprint to Marcus's desk. His Chromebook screen is black.</p>
+               <div class="outcome-box bad">You spend 8 minutes discovering the device wasn't plugged in last night. Meanwhile, three more students have "problems" and one table has devolved into watching YouTube.</div>
+               <p>Your sanity drops as you realize: <span class="danger">you've become the IT help desk.</span></p>
+               <p>A student approaches: "I finished my research. Where do I submit?"</p>`,
+        choices: [
+          { text: "Explain submission while still troubleshooting Marcus's device", next: 5, sanity: -10, time: -5 },
+          { text: "Stop everything and address the whole class about submission", next: 6, sanity: -5, time: -3 },
+          { text: "Point to the clearly posted submission instructions", next: 7, sanity: 5, time: 0, item: "Standard Assignment Location" }
+        ]
+      },
+      3: {
+        text: `<p>Marcus thinks for a moment. "Um... nothing?"</p>
+               <p>You gesture to the poster on the wall:</p>
+               <div class="tip-box">Before asking for help: 1) Check the basics 2) Try a restart 3) Read the error message</div>
+               <p>Marcus presses the power button. <span class="success">The screen lights up.</span></p>
+               <p>"Oh. It was just asleep."</p>
+               <p>Two other students see this and quietly check their own devices.</p>`,
+        choices: [
+          { text: "Continue with the lesson", next: 5, sanity: 5, time: 0 },
+          { text: "Take a moment to reinforce the protocol with the class", next: 8, sanity: 10, time: -2 }
+        ]
+      },
+      4: {
+        text: `<p>You nod toward Jasmine, today's rotating tech helper.</p>
+               <p>She walks over to Marcus with practiced confidence.</p>
+               <div class="outcome-box good">Jasmine solves the problem in 45 seconds (it was asleep), then helps two other students while you continue circulating and asking questions about the research.</div>
+               <p class="success">This is working.</p>
+               <p>But now Jayden has his hand up: "Can I go to the bathroom?"</p>
+               <p>His Chromebook lid is open. He hasn't typed a word.</p>`,
+        choices: [
+          { text: "Let him go—pick your battles", next: 9, sanity: -5, time: -2 },
+          { text: "Ask him to close his lid and share one thing he's learned first", next: 10, sanity: 5, time: -1, item: "Close the Lid Principle" }
+        ]
+      },
+      5: {
+        text: `<p>You're pulled in three directions. Students sense the chaos.</p>
+               <p>The volume in the room rises. Someone shouts <span class="danger">"I CAN'T FIND MY FILE!"</span></p>
+               <p>You realize: there's no standard file naming convention. No shared folder structure. Every student saved their work somewhere different.</p>
+               <p>Time is bleeding away.</p>`,
+        choices: [
+          { text: "Stop the class and establish naming conventions now", next: 11, sanity: -5, time: -10, item: "File Naming Convention" },
+          { text: "Have students pair up—one partner helps the other locate files", next: 12, sanity: 5, time: -3 },
+          { text: "Accept the chaos and just try to get through the period", next: 13, sanity: -20, time: -5 }
+        ]
+      },
+      6: {
+        text: `<p>You call for attention. Half the class looks up.</p>
+               <p>"Eyes up here. EYES UP HERE."</p>
+               <p>The Chromebook lids stay open. Fingers keep typing. Eyes dart between you and screens.</p>
+               <div class="outcome-box bad">You're competing with the infinite distraction machine. And losing.</div>`,
+        choices: [
+          { text: "Raise your voice louder", next: 13, sanity: -15, time: -3 },
+          { text: "Use your signal for 'lids at 45 degrees'", next: 14, sanity: 10, time: 0, item: "Lids at 45 Signal" }
+        ]
+      },
+      7: {
+        text: `<p>You point to the board where submission instructions are always posted in the same place, same format.</p>
+               <p>The student nods and returns to their seat.</p>
+               <div class="outcome-box good">Three other students glance at the board and answer their own questions without asking.</div>
+               <p class="success">Routines pay compound interest.</p>`,
+        choices: [
+          { text: "Continue to the final challenge", next: 15, sanity: 10, time: 0 }
+        ]
+      },
+      8: {
+        text: `<p>"Everyone, lids at 45 for a second."</p>
+               <p>The class has practiced this. Within 8 seconds, all Chromebooks are half-closed.</p>
+               <p>"Remember: before you call me over, you try the three steps on the wall. Marcus just solved his own problem. You can too."</p>
+               <div class="outcome-box good">This 30-second investment will save you hours across the semester.</div>`,
+        choices: [
+          { text: "Resume the lesson", next: 15, sanity: 10, time: 0 }
+        ]
+      },
+      9: {
+        text: `<p>Jayden leaves. He's gone for 12 minutes.</p>
+               <p>When he returns, he's lost the thread of the activity completely. He asks his neighbor what to do. His neighbor stops their own work to explain.</p>
+               <div class="outcome-box bad">The distraction ripples outward.</div>
+               <p>You notice four other students have drifted off-task while you were managing other issues.</p>`,
+        choices: [
+          { text: "Push through to the end of class", next: 15, sanity: -10, time: -5 }
+        ]
+      },
+      10: {
+        text: `<p>"Close your lid for a sec, Jayden. Before you go, tell me one thing you learned about your topic."</p>
+               <p>Jayden hesitates. He actually read something. "Um, the Amazon River is like, really long?"</p>
+               <p>"Good start. When you get back, I want you to find out exactly how long. Then you can go."</p>
+               <div class="outcome-box good">He's back in 3 minutes with a purpose. The lid-close created a cognitive reset.</div>`,
+        choices: [
+          { text: "Continue to the final challenge", next: 15, sanity: 10, time: 0 }
+        ]
+      },
+      11: {
+        text: `<p>You spend 10 minutes establishing conventions. Students grumble. Time evaporates.</p>
+               <p>But you've planted a seed.</p>
+               <div class="tip-box">Next class, start with the convention. Front-load the routine before the chaos.</div>
+               <p>The lesson limps to a finish.</p>`,
+        choices: [
+          { text: "See final results", next: 16, sanity: 0, time: 0 }
+        ]
+      },
+      12: {
+        text: `<p>Students pair up. The helper gets a sense of accomplishment; the helped student feels less alone.</p>
+               <div class="outcome-box good">Peer support distributes the load AND creates community.</div>
+               <p>The volume drops. Students are talking, but about the work.</p>`,
+        choices: [
+          { text: "Continue to the final challenge", next: 15, sanity: 10, time: 0 }
+        ]
+      },
+      13: {
+        text: `<p>You survive the period. Barely.</p>
+               <p>As students file out, one says: "That was confusing."</p>
+               <p>Another forgot to submit. Three more saved to the wrong folder.</p>
+               <div class="outcome-box bad">The technology was present. The learning was not.</div>`,
+        choices: [
+          { text: "See final results", next: 16, sanity: -10, time: 0 }
+        ]
+      },
+      14: {
+        text: `<p>You raise your hand in the practiced gesture. Students recognize it.</p>
+               <p>Within 10 seconds, every lid is at 45 degrees. The screens are still visible but no longer competing for attention.</p>
+               <p class="success">"Thank you. Here's where we submit..."</p>
+               <p>Thirty seconds of instruction. Done. Lids open. Back to work.</p>`,
+        choices: [
+          { text: "Continue to the final challenge", next: 15, sanity: 15, time: 0 }
+        ]
+      },
+      15: {
+        text: `<p>Five minutes left. Time for the exit ticket.</p>
+               <p>A student raises their hand: "Can I do the exit ticket tomorrow? My Chromebook's about to die."</p>
+               <p>They had 50 minutes to notice this.</p>`,
+        choices: [
+          { text: "Let it slide this time", next: 17, sanity: -5, time: 0 },
+          { text: "Point to the charging station and dead battery protocol", next: 18, sanity: 10, time: 0, item: "Dead Battery Protocol" },
+          { text: "Have them partner with someone who's done", next: 18, sanity: 5, time: 0 }
+        ]
+      },
+      16: {
+        text: `<p class="danger">CLASS COMPLETE: SURVIVAL MODE</p>
+               <p>You made it through. But at what cost?</p>
+               <p>The technology was present. But was it serving learning, or just creating expensive busywork?</p>
+               <div class="tip-box">Every routine you didn't have cost you time. Every protocol you didn't establish cost you sanity. The good news: you can build them. Start with one.</div>`,
+        choices: [
+          { text: "Start a new adventure", next: "restart", sanity: 0, time: 0 }
+        ],
+        ending: true
+      },
+      17: {
+        text: `<p>The student grins and packs up early.</p>
+               <p>Two other students notice. "Wait, we can skip the exit ticket?"</p>
+               <div class="outcome-box bad">Exceptions become expectations.</div>`,
+        choices: [
+          { text: "See final results", next: 19, sanity: -10, time: 0 }
+        ]
+      },
+      18: {
+        text: `<p>"Dead batteries use the charging station. You can finish at the standing desk or borrow a device from the spare cart."</p>
+               <p>The protocol exists. The student knows it. They just wanted to see if today was different.</p>
+               <div class="outcome-box good">Consistency is a gift you give yourself.</div>`,
+        choices: [
+          { text: "See final results", next: 19, sanity: 10, time: 0 }
+        ]
+      },
+      19: {
+        text: `<p class="success">CLASS COMPLETE!</p>
+               <p>The bell rings. Students file out. You take a breath.</p>
+               <p>Today wasn't perfect. No day is. But you're building systems that will make tomorrow better.</p>
+               <p>Review your acquired strategies below. Each one is a brick in the foundation of sustainable integration.</p>`,
+        choices: [
+          { text: "Start a new adventure", next: "restart", sanity: 0, time: 0 }
+        ],
+        ending: true
+      }
+    };
+
+    // Render current scene
+    function renderScene() {
+      const scene = scenes[gameState.scene];
+      const content = document.getElementById('game-content');
+      
+      let html = `<div class="scene-text">${scene.text}</div>`;
+      html += `<div class="choices">`;
+      
+      scene.choices.forEach((choice, index) => {
+        html += `<button class="choice-btn" onclick="makeChoice(${index})">${choice.text}</button>`;
+      });
+      
+      html += `</div>`;
+      content.innerHTML = html;
+      
+      // Update stats
+      document.getElementById('sanity').textContent = gameState.sanity;
+      document.getElementById('time').textContent = gameState.time;
+      document.getElementById('scene-num').textContent = gameState.scene;
+      document.getElementById('progress').style.width = `${(gameState.scene / 19) * 100}%`;
+      
+      // Update inventory
+      const invItems = document.getElementById('inventory-items');
+      if (gameState.inventory.length === 0) {
+        invItems.textContent = 'None yet...';
+      } else {
+        invItems.innerHTML = gameState.inventory.map(item => 
+          `<span class="inventory-item">${item}</span>`
+        ).join('');
+      }
+    }
+
+    // Make a choice
+    function makeChoice(index) {
+      const scene = scenes[gameState.scene];
+      const choice = scene.choices[index];
+      
+      // Apply effects
+      gameState.sanity += choice.sanity || 0;
+      gameState.time += choice.time || 0;
+      
+      // Clamp values
+      gameState.sanity = Math.max(0, Math.min(100, gameState.sanity));
+      gameState.time = Math.max(0, gameState.time);
+      
+      // Add item to inventory if present
+      if (choice.item && !gameState.inventory.includes(choice.item)) {
+        gameState.inventory.push(choice.item);
+      }
+      
+      // Handle restart
+      if (choice.next === "restart") {
+        gameState = {
+          sanity: 100,
+          time: 50,
+          scene: 1,
+          inventory: [],
+          flags: {}
+        };
+      } else {
+        gameState.scene = choice.next;
+      }
+      
+      renderScene();
+    }
+
+    // Start the game
+    renderScene();
+  </script>
+</body>
+</html>
